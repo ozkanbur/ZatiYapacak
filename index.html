@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Zati İhtiyaç Sistemi</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2C3E50">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --renk-kirmizi: #C8102E;
+            --renk-koyu-gri: #2C3E50;
+            --renk-bg: #F8F9FA;
+            --renk-beyaz: #FFFFFF;
+            --renk-basari: #27AE60;
+            --renk-uyari: #E74C3C;
+            --golge: 0 4px 16px rgba(0,0,0,0.1);
+        }
+
+        body { font-family: 'IBM Plex Sans', sans-serif; background: var(--renk-bg); margin: 0; padding: 0; color: var(--renk-koyu-gri); min-height: 100vh; }
+
+        #loginScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #2C3E50 0%, #1a252f 100%); display: flex; justify-content: center; align-items: center; z-index: 9999; }
+        .login-card { background: white; padding: 40px; border-radius: 16px; width: 90%; max-width: 400px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.3); border-top: 5px solid var(--renk-kirmizi); }
+        .login-card h2 { margin-top: 0; color: var(--renk-koyu-gri); font-family: 'Crimson Text', serif; }
+
+        #mainApp { display: none; padding-bottom: 50px; }
+        .header { background: linear-gradient(135deg, var(--renk-koyu-gri) 0%, #34495E 100%); color: white; padding: 24px 20px; text-align: center; border-bottom: 4px solid var(--renk-kirmizi); box-shadow: var(--golge); }
+        .header h1 { margin: 0; font-family: 'Crimson Text', serif; font-size: 1.8rem; }
+        .slogan { font-style: italic; opacity: 0.9; margin-top: 5px; font-size: 0.9rem; color: #ecf0f1; }
+        .container { max-width: 800px; margin: 20px auto; padding: 0 16px; }
+
+        .card { background: white; padding: 24px; border-radius: 12px; box-shadow: var(--golge); margin-bottom: 20px; border: 1px solid #e0e0e0; }
+        .status-bar { background: #fff3cd; color: #856404; padding: 12px; text-align: center; border-radius: 8px; margin-bottom: 15px; display: none; font-weight: 600; border: 1px solid #ffeeba; }
+
+        input, select { width: 100%; padding: 14px; margin-bottom: 16px; border: 2px solid #e0e0e0; border-radius: 8px; box-sizing: border-box; font-size: 16px; font-family: inherit; transition: 0.3s; }
+        input:focus, select:focus { border-color: var(--renk-kirmizi); outline: none; }
+
+        .istif-row { background: #f8f9fa; border: 1px solid #dee2e6; padding: 16px; margin-bottom: 16px; border-radius: 8px; position: relative; }
+        .istif-header { display: flex; justify-content: space-between; margin-bottom: 10px; font-weight: bold; color: var(--renk-koyu-gri); }
+
+        button { width: 100%; padding: 16px; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.2s; text-transform: uppercase; letter-spacing: 0.5px; }
+        .btn-primary { background: var(--renk-kirmizi); color: white; }
+        .btn-success { background: var(--renk-basari); color: white; }
+        .btn-secondary { background: var(--renk-koyu-gri); color: white; margin-bottom: 10px; }
+        button:disabled { opacity: 0.7; cursor: not-allowed; }
+
+        .loader { border: 3px solid rgba(255,255,255,0.3); border-top: 3px solid white; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 10px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .total-box { background: #2C3E50; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; text-align: center; }
+        .total-amount { font-size: 1.8rem; font-family: 'Crimson Text', serif; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div id="loginScreen">
+        <div class="login-card">
+            <h2>🔐 Güvenli Giriş</h2>
+            <p>Sisteme erişmek için şifrenizi giriniz.</p>
+            <input type="password" id="loginPassword" placeholder="Şifreniz" style="text-align: center;">
+            <button class="btn-primary" onclick="sistemeGirisYap()" id="btnLogin">GİRİŞ YAP</button>
+            <p id="loginStatus" style="color: var(--renk-uyari); margin-top: 10px; font-size: 0.9rem; min-height: 20px;"></p>
+        </div>
+    </div>
+
+    <div id="mainApp">
+        <div class="header">
+            <h1>Zati İhtiyaç Sistemi</h1>
+            <p class="slogan">Türk Mühendisliğinin Dijital Gücü</p>
+        </div>
+
+        <div class="container">
+            <div id="connectionStatus" class="status-bar">⚠️ İnternet bağlantısı yok. Kayıtlar hafızada saklanıyor.</div>
+
+            <div class="card">
+                <h3 style="margin-top:0; border-bottom:2px solid var(--renk-kirmizi); padding-bottom:10px;">👤 Hak Sahibi Bilgileri</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <input type="text" id="ad" placeholder="Ad" required>
+                    <input type="text" id="soyad" placeholder="Soyad" required>
+                </div>
+                <input type="tel" id="tc" placeholder="T.C. Kimlik No (11 Hane)" maxlength="11" oninput="this.value = this.value.replace(/[^0-9]/g, '')" required>
+                <input type="tel" id="telefon" placeholder="Telefon No (05xx xxx xx xx)" required>
+                <input type="text" id="koy" placeholder="Köyü / Mahallesi" required>
+            </div>
+
+            <div class="card">
+                <h3 style="margin-top:0; border-bottom:2px solid var(--renk-kirmizi); padding-bottom:10px;">🌲 İstif Bilgileri</h3>
+                <div id="istifAlani"></div>
+                <button type="button" class="btn-secondary" onclick="yeniIstifEkle()">+ Yeni İstif Ekle</button>
+            </div>
+
+            <div class="total-box">
+                <div style="opacity:0.8; font-size:0.9rem;">TOPLAM TUTAR (KDV Dahil)</div>
+                <div class="total-amount" id="toplamTutar">₺0,00</div>
+                <div id="toplamM3" style="font-size:0.9rem; margin-top:5px;">0,000 m³</div>
+            </div>
+
+            <button type="button" class="btn-success" id="btnKaydet" onclick="kaydiTamamla()">KAYDET VE GÖNDER</button>
+            
+            <div style="text-align:center; margin-top:30px;">
+                <a href="#" onclick="cikisYap()" style="color:#95a5a6; text-decoration:none; font-size:0.9rem;">Güvenli Çıkış Yap</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // DİKKAT: URL'İ BURAYA YAPIŞTIRIN
+        // ==========================================
+        const API_URL = "https://script.google.com/macros/s/AKfycbxx3ZGx_chIdnpYSLorFGwDfH3Ry-3tLPac82I5yOr9cZfwDdf8LClPgy8xj1xCS7hf/exec"; 
+
+        let birimFiyat = 1500; 
+        let istifSayisi = 0;
+        let offlineKuyruk = JSON.parse(localStorage.getItem('offlineKuyruk') || '[]');
+
+        window.onload = function() {
+            yeniIstifEkle();
+            if (sessionStorage.getItem('girisYapildi') === 'true') ekraniAc();
+            kuyrukKontrol();
+            window.addEventListener('online',  () => { durumGuncelle(true); kuyrukKontrol(); });
+            window.addEventListener('offline', () => durumGuncelle(false));
+            durumGuncelle(navigator.onLine);
+        };
+
+        async function sistemeGirisYap() {
+            const pass = document.getElementById('loginPassword').value;
+            const btn = document.getElementById('btnLogin');
+            const status = document.getElementById('loginStatus');
+
+            if (!pass) { status.textContent = 'Lütfen şifre giriniz.'; return; }
+            btn.innerHTML = '<div class="loader"></div> Kontrol ediliyor...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST', mode: 'cors',
+                    body: JSON.stringify({ action: 'login', password: pass })
+                });
+                const result = await response.json();
+                if (result.status === 'success') {
+                    sessionStorage.setItem('girisYapildi', 'true');
+                    sessionStorage.setItem('appPassword', pass);
+                    ekraniAc();
+                } else {
+                    status.textContent = 'Hatalı şifre!';
+                    btn.innerHTML = 'GİRİŞ YAP';
+                    btn.disabled = false;
+                }
+            } catch (error) {
+                if (!navigator.onLine && localStorage.getItem('sonBasariliSifre') === pass) {
+                    sessionStorage.setItem('girisYapildi', 'true');
+                    sessionStorage.setItem('appPassword', pass);
+                    ekraniAc();
+                } else {
+                    status.textContent = 'Bağlantı hatası veya URL hatalı.';
+                    btn.innerHTML = 'GİRİŞ YAP';
+                    btn.disabled = false;
+                }
+            }
+        }
+
+        function ekraniAc() {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'block';
+            if(sessionStorage.getItem('appPassword')) localStorage.setItem('sonBasariliSifre', sessionStorage.getItem('appPassword'));
+        }
+
+        function cikisYap() { sessionStorage.clear(); location.reload(); }
+
+        // --- GÜNCELLENEN İSTİF EKLEME VE LİSTE ---
+        function yeniIstifEkle() {
+            istifSayisi++;
+            const div = document.createElement('div');
+            div.className = 'istif-row';
+            div.innerHTML = `
+                <div class="istif-header">
+                    <span>#${istifSayisi}</span>
+                    <span style="color:#e74c3c; cursor:pointer;" onclick="this.parentElement.parentElement.remove(); toplamHesapla();">Sil</span>
+                </div>
+                <input type="text" class="istif-no" placeholder="İstif No" required>
+                <input type="number" class="istif-m3" placeholder="Hacim (m³)" step="0.001" oninput="toplamHesapla()" required>
+                <select class="istif-amac">
+                    <option value="">Seçiniz...</option>
+                    <option value="Ev Yeni">Ev Yeni</option>
+                    <option value="Ahır Yeni">Ahır Yeni</option>
+                    <option value="Kümes Yeni">Kümes Yeni</option>
+                    <option value="Ambar Yeni">Ambar Yeni</option>
+                    <option value="Samanlık Yeni">Samanlık Yeni</option>
+                    <option value="Ev Tam.">Ev Tam.</option>
+                    <option value="Ahır Tam.">Ahır Tam.</option>
+                    <option value="Kümes Tam.">Kümes Tam.</option>
+                    <option value="Ambar Tam.">Ambar Tam.</option>
+                    <option value="Samanlık Tam.">Samanlık Tam.</option>
+                    <option value="Cami Yeni">Cami Yeni</option>
+                    <option value="Cami Tam.">Cami Tam.</option>
+                    <option value="Okul Yeni">Okul Yeni</option>
+                    <option value="Okul Tam.">Okul Tam.</option>
+                </select>
+            `;
+            document.getElementById('istifAlani').appendChild(div);
+        }
+
+        function toplamHesapla() {
+            let toplamM3 = 0;
+            document.querySelectorAll('.istif-m3').forEach(input => { toplamM3 += parseFloat(input.value) || 0; });
+            const kdvDahil = toplamM3 * birimFiyat * 1.20;
+            document.getElementById('toplamTutar').innerText = '₺' + kdvDahil.toLocaleString('tr-TR', {minimumFractionDigits: 2});
+            document.getElementById('toplamM3').innerText = toplamM3.toLocaleString('tr-TR', {minimumFractionDigits: 3}) + ' m³';
+            return { m3: toplamM3, tutar: kdvDahil };
+        }
+
+        function kaydiTamamla() {
+            const btn = document.getElementById('btnKaydet');
+            if(!document.getElementById('ad').value || !document.getElementById('tc').value) {
+                alert('Zorunlu alanları doldurunuz.'); return;
+            }
+
+            btn.innerHTML = '<div class="loader"></div> KAYDEDİLİYOR...';
+            btn.disabled = true;
+
+            const hesap = toplamHesapla();
+            const veri = {
+                tarih: new Date().toLocaleDateString('tr-TR'),
+                kisisel: {
+                    ad: document.getElementById('ad').value,
+                    soyad: document.getElementById('soyad').value,
+                    tcKimlik: document.getElementById('tc').value,
+                    telefon: document.getElementById('telefon').value,
+                    koyu: document.getElementById('koy').value
+                },
+                istifler: [],
+                toplam: { metrekup: hesap.m3, tutar: hesap.tutar }
+            };
+
+            document.querySelectorAll('.istif-row').forEach(row => {
+                veri.istifler.push({
+                    istifNo: row.querySelector('.istif-no').value,
+                    metrekup: row.querySelector('.istif-m3').value,
+                    amac: row.querySelector('.istif-amac').value
+                });
+            });
+
+            const paket = { action: 'save', password: sessionStorage.getItem('appPassword'), data: veri };
+
+            if (navigator.onLine) sunucuyaGonder(paket);
+            else {
+                offlineKuyruk.push(paket);
+                localStorage.setItem('offlineKuyruk', JSON.stringify(offlineKuyruk));
+                alert('⚠️ İnternet yok. Kayıt hafızaya alındı.');
+                formuTemizle();
+                btn.innerHTML = 'KAYDET VE GÖNDER';
+                btn.disabled = false;
+            }
+        }
+
+        function sunucuyaGonder(paket) {
+            fetch(API_URL, { method: 'POST', mode: 'cors', body: JSON.stringify(paket) })
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === 'success') { alert('✅ ' + data.message); formuTemizle(); }
+                else { alert('❌ Hata: ' + data.message); }
+            })
+            .catch(err => {
+                offlineKuyruk.push(paket);
+                localStorage.setItem('offlineKuyruk', JSON.stringify(offlineKuyruk));
+            })
+            .finally(() => {
+                const btn = document.getElementById('btnKaydet');
+                if(btn) { btn.innerHTML = 'KAYDET VE GÖNDER'; btn.disabled = false; }
+            });
+        }
+
+        function formuTemizle() {
+            document.getElementById('ad').value = '';
+            document.getElementById('soyad').value = '';
+            document.getElementById('tc').value = '';
+            document.getElementById('telefon').value = '';
+            document.getElementById('koy').value = '';
+            document.getElementById('istifAlani').innerHTML = '';
+            istifSayisi = 0; yeniIstifEkle(); toplamHesapla();
+        }
+
+        function kuyrukKontrol() {
+            if (navigator.onLine && offlineKuyruk.length > 0) {
+                const status = document.getElementById('connectionStatus');
+                status.style.display = 'block';
+                status.innerText = '🔄 ' + offlineKuyruk.length + ' kayıt gönderiliyor...';
+                const gonderilecek = [...offlineKuyruk];
+                offlineKuyruk = []; localStorage.setItem('offlineKuyruk', '[]');
+                gonderilecek.forEach(paket => sunucuyaGonder(paket));
+                setTimeout(() => { durumGuncelle(true); }, 3000);
+            }
+        }
+
+        function durumGuncelle(online) {
+            const status = document.getElementById('connectionStatus');
+            if (online) status.style.display = 'none';
+            else {
+                status.style.display = 'block';
+                status.innerText = '⚠️ İnternet bağlantısı yok. Offline Mod aktif.';
+            }
+        }
+        
+        document.getElementById('telefon').addEventListener('input', function (e) {
+            var x = e.target.value.replace(/\D/g, '').match(/(\d{0,4})(\d{0,3})(\d{0,2})(\d{0,2})/);
+            e.target.value = !x[2] ? x[1] : x[1] + ' ' + x[2] + (x[3] ? ' ' + x[3] : '') + (x[4] ? ' ' + x[4] : '');
+        });
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => navigator.serviceWorker.register('sw.js'));
+        }
+    </script>
+</body>
+</html>
